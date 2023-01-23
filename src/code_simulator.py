@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import qutip as qt
+import matplotlib
 import matplotlib.pyplot as plt
 from . import code
 
@@ -15,15 +16,19 @@ def make_wigner_plots_for(code: code.Code):
 	plus_encoding_wigner = qt.wigner(qt.ket2dm(code.plus_encoding), np.linspace(*x_bounds, x_samples), np.linspace(*y_bounds, y_samples))
 	minus_encoding_wigner = qt.wigner(qt.ket2dm(code.minus_encoding), np.linspace(*x_bounds, x_samples), np.linspace(*y_bounds, y_samples))
 
-	if not os.path.exists(f"data/{code.name}/"):
-		os.makedirs(f"data/{code.name}")
+	all_wigner_values = np.concatenate((zero_encoding_wigner, one_encoding_wigner, plus_encoding_wigner, minus_encoding_wigner))
+	smallest_wigner_value = np.min(all_wigner_values)
+	largest_wigner_value = np.max(all_wigner_values)
+
+	cmap = plt.get_cmap("RdBu")
+	normalizer = matplotlib.colors.Normalize(smallest_wigner_value, largest_wigner_value)
 
 	fig, axes = plt.subplots(2, 2, constrained_layout=True)
-	axes[0][0].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), zero_encoding_wigner, 100, cmap=plt.cm.RdBu)
-	axes[0][1].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), one_encoding_wigner, 100, cmap=plt.cm.RdBu)
-	axes[1][0].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), plus_encoding_wigner, 100, cmap=plt.cm.RdBu)
-	contour = axes[1][1].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), minus_encoding_wigner, 100, cmap=plt.cm.RdBu)
-	fig.colorbar(contour, ax=axes.ravel().tolist())
+	axes[0][0].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), zero_encoding_wigner, 100, cmap=cmap, norm=normalizer)
+	axes[0][1].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), one_encoding_wigner, 100, cmap=cmap, norm=normalizer)
+	axes[1][0].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), plus_encoding_wigner, 100, cmap=cmap, norm=normalizer)
+	axes[1][1].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), minus_encoding_wigner, 100, cmap=cmap, norm=normalizer)
+	fig.colorbar(matplotlib.cm.ScalarMappable(norm=normalizer, cmap=cmap), ax=axes.ravel().tolist())
 
 	for axis in axes.flat:
 		axis.set_aspect("equal")
@@ -34,6 +39,9 @@ def make_wigner_plots_for(code: code.Code):
 	axes[1][0].set_title("Plus Encoding")
 	axes[1][1].set_title("Minus Encoding")
 
+	if not os.path.exists(f"data/{code.name}/"):
+		os.makedirs(f"data/{code.name}")
 	plt.savefig(f"data/{code.name}/wigner.png")
 
+make_wigner_plots_for(code.trivial_code)
 make_wigner_plots_for(code.BinomialCode(3, 10, 36))
