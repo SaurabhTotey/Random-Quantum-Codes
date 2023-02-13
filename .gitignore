@@ -5,3 +5,4 @@ share/
 pyvenv.cfg
 __pycache__/
 data/
+.DS_STORE

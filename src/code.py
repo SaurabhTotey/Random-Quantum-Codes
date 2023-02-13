@@ -2,7 +2,7 @@ import cvxpy as cp
 import numpy as np
 import qutip as qt
 import scipy
-from typing import Optional, Tuple
+from typing import Tuple
 
 def create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding: qt.Qobj, minus_encoding: qt.Qobj) -> Tuple[qt.Qobj, qt.Qobj]:
 	zero_encoding = (plus_encoding + minus_encoding) / np.sqrt(2)
@@ -15,7 +15,7 @@ def create_plus_and_minus_encodings_from_zero_and_one_encodings(zero_encoding: q
 	return (plus_encoding, minus_encoding)
 
 class Code:
-	def __init__(self, name: str, zero_and_one_encodings: Tuple[qt.Qobj,  qt.Qobj], is_random: bool):
+	def __init__(self, name: str, zero_and_one_encodings: Tuple[qt.Qobj, qt.Qobj], is_random: bool):
 		self.name: str = name
 		self.is_random: bool = is_random
 		self.zero_encoding: qt.Qobj = zero_and_one_encodings[0]

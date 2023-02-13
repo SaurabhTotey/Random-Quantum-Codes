@@ -42,6 +42,3 @@ def make_wigner_plots_for(code: code.Code):
 	if not os.path.exists(f"data/{code.name}/"):
 		os.makedirs(f"data/{code.name}")
 	plt.savefig(f"data/{code.name}/wigner.png")
-
-make_wigner_plots_for(code.trivial_code)
-make_wigner_plots_for(code.BinomialCode(3, 10, 36))
