@@ -15,8 +15,8 @@ def create_plus_and_minus_encodings_from_zero_and_one_encodings(zero_encoding: q
 	return (plus_encoding, minus_encoding)
 
 class Code:
-	def __init__(self, name: str, zero_and_one_encodings: Tuple[qt.Qobj, qt.Qobj], is_random: bool):
-		self.name: str = name
+	def __init__(self, family_name: str, zero_and_one_encodings: Tuple[qt.Qobj, qt.Qobj], is_random: bool):
+		self.family_name: str = family_name
 		self.is_random: bool = is_random
 		self.zero_encoding: qt.Qobj = zero_and_one_encodings[0]
 		self.one_encoding: qt.Qobj = zero_and_one_encodings[1]
@@ -30,7 +30,7 @@ class Code:
 		self.physical_dimension: int = self.kraus_encoder.dims[0][0]
 		self.code_dimension: int = self.kraus_encoder.dims[1][0]
 
-	def compute_optimal_choi_recovery_matrix_through(self, channel_matrix: qt.Qobj) -> qt.Qobj:
+	def compute_optimal_recovery_matrix_through(self, channel_matrix: qt.Qobj) -> qt.Qobj:
 		total_dimension = self.physical_dimension * self.code_dimension
 		choi_matrix = qt.super_to_choi((1 / self.code_dimension ** 2) * (channel_matrix * self.encoder).dag())
 		sdp_solution = cp.Variable((total_dimension, total_dimension), complex=True)
@@ -40,10 +40,12 @@ class Code:
 			sdp_solution >> 0,
 			sdp_solution.H == sdp_solution,
 		]).solve()
-		return qt.Qobj(
-			scipy.sparse.csr_matrix(sdp_solution.value),
-			dims=[[[self.physical_dimension], [self.code_dimension]], [[self.physical_dimension], [self.code_dimension]]],
-			superrep="choi",
+		return qt.choi_to_super(
+			qt.Qobj(
+				scipy.sparse.csr_matrix(sdp_solution.value),
+				dims=[[[self.physical_dimension], [self.code_dimension]], [[self.physical_dimension], [self.code_dimension]]],
+				superrep="choi",
+			)
 		)
 
 trivial_code = Code("trivial", (qt.basis(2, 0), qt.basis(2, 1)), False)
