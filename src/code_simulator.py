@@ -33,17 +33,17 @@ def make_wigner_plots_for(code: code.Code) -> None:
 	for axis in axes.flat:
 		axis.set_aspect("equal")
 
-	plt.suptitle(f"{code.name} Wigner Function Plots")
+	plt.suptitle(f"{code.family_name} Wigner Function Plots")
 	axes[0][0].set_title("Zero Encoding")
 	axes[0][1].set_title("One Encoding")
 	axes[1][0].set_title("Plus Encoding")
 	axes[1][1].set_title("Minus Encoding")
 
-	if not os.path.exists(f"data/code/{code.name}/"):
-		os.makedirs(f"data/code/{code.name}")
-	plt.savefig(f"data/code/{code.name}/wigner.png")
+	if not os.path.exists(f"data/code/{code.family_name}/"):
+		os.makedirs(f"data/code/{code.family_name}")
+	plt.savefig(f"data/code/{code.family_name}/wigner.png")
 
 def calculate_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: float, use_optimal_recovery: bool) -> float:
-	noise_matrix = noise.get_loss_noise_matrix(loss_noise_amount)
+	noise_matrix = noise.get_loss_noise_matrix(code.physical_dimension, loss_noise_amount)
 	recovery_matrix = recovery.get_optimal_recovery_matrix_for_loss_channel(code, loss_noise_amount) if use_optimal_recovery else qt.identity(code.physical_dimension)
 	return qt.average_gate_fidelity(recovery_matrix * noise_matrix * code.encoder)

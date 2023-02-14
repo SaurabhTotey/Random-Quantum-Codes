@@ -32,21 +32,6 @@ class Code:
 
 trivial_code = Code("trivial", (qt.basis(2, 0), qt.basis(2, 1)), False)
 
-def make_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
-	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
-	plus_encoding, minus_encoding = qt.Qobj(), qt.Qobj()
-	for i in range(number_of_filled_levels + 2):
-		i_encoding = np.sqrt(scipy.special.binom(number_of_filled_levels + 1, i)) * qt.basis(physical_dimension, i * symmetry)
-		plus_encoding += i_encoding
-		minus_encoding += (-1) ** i * i_encoding
-	plus_encoding = plus_encoding.unit()
-	minus_encoding = minus_encoding.unit()
-	return Code(
-		f"binomial-{symmetry},{number_of_filled_levels},{physical_dimension}",
-		create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
-		False
-	)
-
 def serialize_code(code: Code) -> None:
 	path = f"data/code/{code.family_name}/serialized/"
 	if not os.path.exists(path):
@@ -61,7 +46,7 @@ def serialize_code(code: Code) -> None:
 def deserialize_code_family(family_name: str) -> list[Code]:
 	path = f"data/code/{family_name}/serialized/"
 	if not os.path.exists(path):
-		raise f"Path for {family_name} doesn't exist, so the family cannot be deserialized."
+		return []
 	is_random = False
 	with open(f"data/code/{family_name}/is_random.txt", "r") as file:
 		is_random = file.read() == "True"
@@ -72,3 +57,24 @@ def deserialize_code_family(family_name: str) -> list[Code]:
 		one_encoding = qt.qload(f"{current_path}one")
 		codes.append(Code(family_name, (zero_encoding, one_encoding), is_random))
 	return codes
+
+def get_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
+	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
+	family_name = f"binomial-{symmetry},{number_of_filled_levels},{physical_dimension}"
+	existing_versions = deserialize_code_family(family_name)
+	if len(existing_versions) > 0:
+		return existing_versions[-1]
+	plus_encoding, minus_encoding = qt.Qobj(), qt.Qobj()
+	for i in range(number_of_filled_levels + 2):
+		i_encoding = np.sqrt(scipy.special.binom(number_of_filled_levels + 1, i)) * qt.basis(physical_dimension, i * symmetry)
+		plus_encoding += i_encoding
+		minus_encoding += (-1) ** i * i_encoding
+	plus_encoding = plus_encoding.unit()
+	minus_encoding = minus_encoding.unit()
+	binomial_code = Code(
+		family_name,
+		create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
+		False
+	)
+	serialize_code(binomial_code)
+	return binomial_code
