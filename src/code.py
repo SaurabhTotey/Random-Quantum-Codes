@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import qutip as qt
 import scipy
@@ -47,4 +48,29 @@ class BinomialCode(Code):
 			False
 		)
 
-# TODO: methods to serialize and deserialize these codes
+def serialize_code(code: Code) -> None:
+	path = f"data/code/{code.family_name}/serialized/"
+	if not os.path.exists(path):
+		os.makedirs(path)
+	number_of_subdirectories = len(os.listdir(path))
+	new_path = f"{path}{number_of_subdirectories}/"
+	os.makedirs(new_path)
+	qt.qsave(code.zero_encoding, f"{new_path}zero")
+	qt.qsave(code.one_encoding, f"{new_path}one")
+	with open(f"data/code/{code.family_name}/is_random.txt", "w") as file:
+		file.write(f"{code.is_random}")
+
+def deserialize_code_family(family_name: str) -> list[Code]:
+	path = f"data/code/{family_name}/serialized/"
+	if not os.path.exists(path):
+		raise f"Path for {family_name} doesn't exist, so the family cannot be deserialized."
+	is_random = False
+	with open(f"data/code/{family_name}/is_random.txt", "r") as file:
+		is_random = file.read() == "True"
+	codes = []
+	for subdirectory_name in os.listdir(path):
+		current_path = f"{path}{subdirectory_name}/"
+		zero_encoding = qt.qload(f"{current_path}zero")
+		one_encoding = qt.qload(f"{current_path}one")
+		codes.append(Code(family_name, (zero_encoding, one_encoding), is_random))
+	return codes
