@@ -1,4 +1,5 @@
 import cvxpy as cp
+import numpy as np
 import qutip as qt
 import scipy
 from . import code, noise
