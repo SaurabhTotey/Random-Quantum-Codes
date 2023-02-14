@@ -78,3 +78,16 @@ def get_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dime
 	)
 	serialize_code(binomial_code)
 	return binomial_code
+
+def make_haar_random_code(symmetry: int, dimension_cutoff: int, physical_dimension: int) -> Code:
+	assert physical_dimension >= dimension_cutoff and dimension_cutoff >= symmetry
+	zero_projector = sum([qt.ket2dm(qt.basis(physical_dimension, i)) for i in range(0, dimension_cutoff, 2 * symmetry)])
+	one_projector = sum([qt.ket2dm(qt.basis(physical_dimension, i)) for i in range(symmetry, dimension_cutoff, 2 * symmetry)])
+	random_unitary = qt.rand_unitary_haar(physical_dimension)
+	zero_encoding = (zero_projector * random_unitary * qt.basis(physical_dimension, 0)).unit()
+	one_encoding = (one_projector * random_unitary * qt.basis(physical_dimension, 0)).unit()
+	return Code(
+		f"haar-{symmetry},{dimension_cutoff},{physical_dimension}",
+		(zero_encoding, one_encoding),
+		True
+	)
