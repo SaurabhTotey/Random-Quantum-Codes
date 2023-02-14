@@ -32,28 +32,26 @@ class Code:
 
 trivial_code = Code("trivial", (qt.basis(2, 0), qt.basis(2, 1)), False)
 
-class BinomialCode(Code):
-	def __init__(self, symmetry: int, number_of_filled_levels: int, physical_dimension: int):
-		assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
-		plus_encoding, minus_encoding = qt.Qobj(), qt.Qobj()
-		for i in range(number_of_filled_levels + 2):
-			i_encoding = np.sqrt(scipy.special.binom(number_of_filled_levels + 1, i)) * qt.basis(physical_dimension, i * symmetry)
-			plus_encoding += i_encoding
-			minus_encoding += (-1) ** i * i_encoding
-		plus_encoding = plus_encoding.unit()
-		minus_encoding = minus_encoding.unit()
-		super().__init__(
-			f"binomial-{symmetry},{number_of_filled_levels},{physical_dimension}",
-			create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
-			False
-		)
+def make_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
+	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
+	plus_encoding, minus_encoding = qt.Qobj(), qt.Qobj()
+	for i in range(number_of_filled_levels + 2):
+		i_encoding = np.sqrt(scipy.special.binom(number_of_filled_levels + 1, i)) * qt.basis(physical_dimension, i * symmetry)
+		plus_encoding += i_encoding
+		minus_encoding += (-1) ** i * i_encoding
+	plus_encoding = plus_encoding.unit()
+	minus_encoding = minus_encoding.unit()
+	return Code(
+		f"binomial-{symmetry},{number_of_filled_levels},{physical_dimension}",
+		create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
+		False
+	)
 
 def serialize_code(code: Code) -> None:
 	path = f"data/code/{code.family_name}/serialized/"
 	if not os.path.exists(path):
 		os.makedirs(path)
-	number_of_subdirectories = len(os.listdir(path))
-	new_path = f"{path}{number_of_subdirectories}/"
+	new_path = f"{path}{len(os.listdir(path)) if code.is_random else 0}/"
 	os.makedirs(new_path)
 	qt.qsave(code.zero_encoding, f"{new_path}zero")
 	qt.qsave(code.one_encoding, f"{new_path}one")

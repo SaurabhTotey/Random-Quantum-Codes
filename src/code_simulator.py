@@ -43,8 +43,7 @@ def make_wigner_plots_for(code: code.Code) -> None:
 		os.makedirs(f"data/code/{code.name}")
 	plt.savefig(f"data/code/{code.name}/wigner.png")
 
-def get_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: float, use_optimal_recovery: bool) -> float:
-	# TODO: save results if possible, and get results from file if code is not random
+def calculate_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: float, use_optimal_recovery: bool) -> float:
 	noise_matrix = noise.get_loss_noise_matrix(loss_noise_amount)
-	recovery_matrix = recovery.get_optimal_recovery_for_loss_channel(code, loss_noise_amount) if use_optimal_recovery else qt.identity(code.physical_dimension)
+	recovery_matrix = recovery.get_optimal_recovery_matrix_for_loss_channel(code, loss_noise_amount) if use_optimal_recovery else qt.identity(code.physical_dimension)
 	return qt.average_gate_fidelity(recovery_matrix * noise_matrix * code.encoder)

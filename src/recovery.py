@@ -5,7 +5,7 @@ import qutip as qt
 import scipy
 from . import code, noise
 
-def get_optimal_recovery_for_loss_channel(code: code.Code, noise_amount: float) -> qt.Qobj:
+def get_optimal_recovery_matrix_for_loss_channel(code: code.Code, noise_amount: float) -> qt.Qobj:
 	if not os.path.exists(f"data/recovery/"):
 		os.makedirs(f"data/recovery/")
 	path = f"data/recovery/optimal,code-{code.family_name},loss-{noise_amount}"
