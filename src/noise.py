@@ -3,9 +3,9 @@ import numpy as np
 import qutip as qt
 
 def get_loss_noise_matrix(dimension: int, noise_amount: float, number_of_terms: int = 50) -> qt.Qobj:
-	if not os.path.exists(f"data/channels/"):
-		os.makedirs(f"data/channels/")
-	path = f"data/channels/loss,{dimension},{noise_amount},{number_of_terms}"
+	if not os.path.exists(f"data/noise/"):
+		os.makedirs(f"data/noise/")
+	path = f"data/noise/loss-{dimension},{noise_amount},{number_of_terms}"
 	if os.path.exists(f"{path}.qu"):
 		return qt.qload(path)
 	lowering_operator = qt.destroy(dimension)

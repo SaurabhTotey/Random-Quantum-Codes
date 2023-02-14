@@ -46,3 +46,5 @@ class BinomialCode(Code):
 			create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
 			False
 		)
+
+# TODO: methods to serialize and deserialize these codes
