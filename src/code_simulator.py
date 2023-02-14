@@ -3,7 +3,7 @@ import numpy as np
 import qutip as qt
 import matplotlib
 import matplotlib.pyplot as plt
-from . import code, noise
+from . import code, noise, recovery
 
 def make_wigner_plots_for(code: code.Code) -> None:
 	x_bounds = (-8, 8)
@@ -43,11 +43,8 @@ def make_wigner_plots_for(code: code.Code) -> None:
 		os.makedirs(f"data/codes/{code.name}")
 	plt.savefig(f"data/codes/{code.name}/wigner.png")
 
-def get_no_recovery_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: float) -> float:
-	# TODO: save results if possible, and get results from file if code is not random
-	return qt.average_gate_fidelity(noise.get_loss_noise_matrix(loss_noise_amount) * code.encoder)
-
-def get_optimal_recovery_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: float) -> float:
+def get_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: float, use_optimal_recovery: bool) -> float:
 	# TODO: save results if possible, and get results from file if code is not random
 	noise_matrix = noise.get_loss_noise_matrix(loss_noise_amount)
-	return qt.average_gate_fidelity(code.compute_optimal_recovery_matrix_through(noise_matrix) * noise_matrix * code.encoder)
+	recovery_matrix = recovery.compute_optimal_recovery_for_loss_channel(code, loss_noise_amount) if use_optimal_recovery else qt.identity(code.physical_dimension)
+	return qt.average_gate_fidelity(recovery_matrix * noise_matrix * code.encoder)

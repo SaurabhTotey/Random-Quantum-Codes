@@ -1,4 +1,3 @@
-import cvxpy as cp
 import numpy as np
 import qutip as qt
 import scipy
@@ -29,24 +28,6 @@ class Code:
 		self.decoder: qt.Qobj = qt.sprepost(self.kraus_encoder.dag(), self.kraus_encoder)
 		self.physical_dimension: int = self.kraus_encoder.dims[0][0]
 		self.code_dimension: int = self.kraus_encoder.dims[1][0]
-
-	def compute_optimal_recovery_matrix_through(self, channel_matrix: qt.Qobj) -> qt.Qobj:
-		total_dimension = self.physical_dimension * self.code_dimension
-		choi_matrix = qt.super_to_choi((1 / self.code_dimension ** 2) * (channel_matrix * self.encoder).dag())
-		sdp_solution = cp.Variable((total_dimension, total_dimension), complex=True)
-		objective = cp.Maximize(cp.real(cp.trace(sdp_solution @ choi_matrix)))
-		cp.Problem(objective, [
-			cp.partial_trace(sdp_solution, [self.physical_dimension, self.code_dimension], 1) == np.identity(self.physical_dimension),
-			sdp_solution >> 0,
-			sdp_solution.H == sdp_solution,
-		]).solve()
-		return qt.choi_to_super(
-			qt.Qobj(
-				scipy.sparse.csr_matrix(sdp_solution.value),
-				dims=[[[self.physical_dimension], [self.code_dimension]], [[self.physical_dimension], [self.code_dimension]]],
-				superrep="choi",
-			)
-		)
 
 trivial_code = Code("trivial", (qt.basis(2, 0), qt.basis(2, 1)), False)
 
