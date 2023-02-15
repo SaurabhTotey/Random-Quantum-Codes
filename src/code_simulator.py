@@ -50,7 +50,7 @@ def get_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: fl
 		with open(complete_path) as file:
 			return float(file.read())
 	noise_matrix = noise.get_loss_noise_matrix(code.physical_dimension, loss_noise_amount)
-	recovery_matrix = recovery.get_optimal_recovery_matrix_for_loss_channel(code, loss_noise_amount) if use_optimal_recovery else qt.identity(code.physical_dimension)
+	recovery_matrix = recovery.get_optimal_recovery_matrix_for_loss_channel(code, loss_noise_amount) if use_optimal_recovery else code.decoder
 	fidelity = qt.average_gate_fidelity(recovery_matrix * noise_matrix * code.encoder)
 	if not code.is_random:
 		if not os.path.exists(directory_path):
