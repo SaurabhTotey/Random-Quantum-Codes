@@ -6,11 +6,12 @@ import scipy
 from . import code, noise
 
 def get_optimal_recovery_matrix_for_loss_channel(code: code.Code, noise_amount: float) -> qt.Qobj:
-	if not os.path.exists(f"data/recovery/"):
-		os.makedirs(f"data/recovery/")
-	path = f"data/recovery/optimal,code-{code.family_name},loss-{noise_amount}"
-	if os.path.exists(f"{path}.qu"):
-		return qt.qload(path)
+	if not code.is_random:
+		if not os.path.exists(f"data/recovery/"):
+			os.makedirs(f"data/recovery/")
+		path = f"data/recovery/optimal,code-{code.family_name},loss-{noise_amount}"
+		if os.path.exists(f"{path}.qu"):
+			return qt.qload(path)
 	loss_noise_matrix = noise.get_loss_noise_matrix(code.physical_dimension, noise_amount)
 	total_dimension = code.physical_dimension * code.code_dimension
 	choi_matrix = qt.super_to_choi((1 / code.code_dimension ** 2) * (loss_noise_matrix * code.encoder).dag())
@@ -28,5 +29,6 @@ def get_optimal_recovery_matrix_for_loss_channel(code: code.Code, noise_amount: 
 			superrep="choi",
 		)
 	)
-	qt.qsave(recovery_matrix, path)
+	if not code.is_random:
+		qt.qsave(recovery_matrix, path)
 	return recovery_matrix
