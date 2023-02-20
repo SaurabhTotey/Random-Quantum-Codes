@@ -79,7 +79,7 @@ def get_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dime
 	serialize_code(binomial_code)
 	return binomial_code
 
-def make_random_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
+def make_bad_random_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
 	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
 	plus_encoding, minus_encoding = qt.Qobj(), qt.Qobj()
 	for i in range(number_of_filled_levels + 2):
