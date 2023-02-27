@@ -30,6 +30,14 @@ class Code:
 		self.physical_dimension: int = self.kraus_encoder.dims[0][0]
 		self.code_dimension: int = self.kraus_encoder.dims[1][0]
 
+def assert_code_is_good(code: Code) -> None:
+	def check_encodings(state_one: qt.Qobj, state_two: qt.Qobj, name_one: str, name_two: str) -> None:
+		relevant_inner_products = ((state_one.dag() * state_two).tr(), state_one.norm(), state_two.norm())
+		if not np.allclose(relevant_inner_products, [0, 1, 1]):
+			raise Exception(f"<{name_one}|{name_two}> = {relevant_inner_products[0]} ;\t sqrt(<{name_one}|{name_one}>) = {relevant_inner_products[1]} ;\t sqrt(<{name_two}|{name_two}>) = {relevant_inner_products[2]}")
+	check_encodings(code.zero_encoding, code.one_encoding, "0", "1")
+	check_encodings(*create_plus_and_minus_encodings_from_zero_and_one_encodings(code.zero_encoding, code.one_encoding), "+", "-")
+
 trivial_code = Code("trivial", (qt.basis(2, 0), qt.basis(2, 1)), False)
 
 def serialize_code(code: Code) -> None:
@@ -76,8 +84,25 @@ def get_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dime
 		create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
 		False
 	)
+	assert_code_is_good(binomial_code)
 	serialize_code(binomial_code)
 	return binomial_code
+
+def make_haar_random_code(symmetry: int, number_of_filled_levels_in_plus_and_minus_states: int, physical_dimension: int) -> Code:
+	assert symmetry * (number_of_filled_levels_in_plus_and_minus_states + 2) <= physical_dimension
+	zero_projector = sum([qt.ket2dm(qt.basis(physical_dimension, i * symmetry * 2)) for i in range(number_of_filled_levels_in_plus_and_minus_states // 2 + 1)])
+	one_projector = sum([qt.ket2dm(qt.basis(physical_dimension, symmetry + i * symmetry * 2)) for i in range(number_of_filled_levels_in_plus_and_minus_states // 2 + 1)])
+	random_state = qt.rand_ket_haar(physical_dimension)
+	random_code = Code(
+		f"haar-random-{symmetry},{number_of_filled_levels_in_plus_and_minus_states},{physical_dimension}",
+		((zero_projector * random_state).unit(), (one_projector * random_state).unit()),
+		True,
+	)
+	assert_code_is_good(random_code)
+	return random_code
+
+def make_rotation_code_from_primitive_state(primitive_state: qt.Qobj, symmetry: int) -> Code:
+	pass
 
 def make_bad_random_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
 	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
@@ -89,7 +114,7 @@ def make_bad_random_code(symmetry: int, number_of_filled_levels: int, physical_d
 	plus_encoding = plus_encoding.unit()
 	minus_encoding = minus_encoding.unit()
 	return Code(
-		f"random-{symmetry},{number_of_filled_levels},{physical_dimension}",
+		f"bad-random-{symmetry},{number_of_filled_levels},{physical_dimension}",
 		create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
 		True
 	)
