@@ -3,6 +3,7 @@ import numpy as np
 import qutip as qt
 import matplotlib
 import matplotlib.pyplot as plt
+from typing import Tuple
 from . import code, noise, recovery
 
 def make_wigner_plots_for(code: code.Code) -> None:
@@ -58,3 +59,33 @@ def get_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: fl
 		with open(complete_path, "w") as file:
 			file.write(f"{fidelity}")
 	return fidelity
+
+def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple[float, float, float, float]:
+	code_one_zero = code_one.zero_encoding.data.toarray()
+	code_two_zero = code_two.zero_encoding.data.toarray()
+	code_one_one = code_one.one_encoding.data.toarray()
+	code_two_one = code_two.one_encoding.data.toarray()
+	code_one_plus_encoding, code_one_minus_encoding = code.create_plus_and_minus_encodings_from_zero_and_one_encodings(code_one.zero_encoding, code_one.one_encoding)
+	code_two_plus_encoding, code_two_minus_encoding = code.create_plus_and_minus_encodings_from_zero_and_one_encodings(code_two.zero_encoding, code_two.one_encoding)
+	code_one_plus = code_one_plus_encoding.data.toarray()
+	code_one_minus = code_one_minus_encoding.data.toarray()
+	code_two_plus = code_two_plus_encoding.data.toarray()
+	code_two_minus = code_two_minus_encoding.data.toarray()
+
+	if code_one.physical_dimension > code_two.physical_dimension:
+		code_one_zero, code_two_zero = code_two_zero, code_one_zero
+		code_one_one, code_two_one = code_two_one, code_one_one
+		code_one_plus, code_two_plus = code_two_plus, code_one_plus
+		code_one_minus, code_two_minus = code_two_minus, code_one_minus
+
+	code_two_zero.resize(code_one_zero.shape, refcheck=False)
+	code_two_one.resize(code_one_one.shape, refcheck=False)
+	code_two_plus.resize(code_one_plus.shape, refcheck=False)
+	code_two_minus.resize(code_one_minus.shape, refcheck=False)
+
+	return (
+		np.vdot(code_one_zero, code_two_zero),
+		np.vdot(code_one_one, code_two_one),
+		np.vdot(code_one_plus, code_two_plus),
+		np.vdot(code_one_minus, code_two_minus)
+	)

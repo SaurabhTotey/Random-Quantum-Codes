@@ -101,8 +101,19 @@ def make_haar_random_code(symmetry: int, number_of_filled_levels_in_plus_and_min
 	assert_code_is_good(random_code)
 	return random_code
 
-def make_rotation_code_from_primitive_state(primitive_state: qt.Qobj, symmetry: int) -> Code:
-	pass
+def make_rotation_code_from_primitive_state(family_name: str, is_random: bool, primitive_state: qt.Qobj, symmetry: int) -> Code:
+	lowering_operator = qt.destroy(primitive_state.dims[0][0])
+	zero_encoding = qt.Qobj()
+	one_encoding = qt.Qobj()
+	for i in range(2 * symmetry):
+		blade = (complex(0, 2 * i * np.pi) / symmetry * lowering_operator.dag() * lowering_operator).expm() * primitive_state
+		zero_encoding += blade
+		one_encoding += (-1) ** i * blade
+	zero_encoding = zero_encoding.unit()
+	one_encoding = one_encoding.unit()
+	code = Code(family_name, (zero_encoding, one_encoding), is_random)
+	assert_code_is_good(code)
+	return code
 
 def make_bad_random_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
 	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
