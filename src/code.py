@@ -100,18 +100,3 @@ def make_haar_random_code(symmetry: int, number_of_filled_levels_in_plus_and_min
 	)
 	assert_code_is_good(random_code)
 	return random_code
-
-def make_bad_random_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
-	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
-	plus_encoding, minus_encoding = qt.Qobj(), qt.Qobj()
-	for i in range(number_of_filled_levels + 2):
-		i_encoding = complex(np.random.randn(), np.random.randn()) * qt.basis(physical_dimension, i * symmetry)
-		plus_encoding += i_encoding
-		minus_encoding += (-1) ** i * i_encoding
-	plus_encoding = plus_encoding.unit()
-	minus_encoding = minus_encoding.unit()
-	return Code(
-		f"bad-random-{symmetry},{number_of_filled_levels},{physical_dimension}",
-		create_zero_and_one_encodings_from_plus_and_minus_encodings(plus_encoding, minus_encoding),
-		True
-	)
