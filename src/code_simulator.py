@@ -84,8 +84,8 @@ def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple
 	code_two_minus.resize(code_one_minus.shape, refcheck=False)
 
 	return (
-		np.vdot(code_one_zero, code_two_zero),
-		np.vdot(code_one_one, code_two_one),
-		np.vdot(code_one_plus, code_two_plus),
-		np.vdot(code_one_minus, code_two_minus)
+		np.abs(np.vdot(code_one_zero, code_two_zero)) ** 2,
+		np.abs(np.vdot(code_one_one, code_two_one)) ** 2,
+		np.abs(np.vdot(code_one_plus, code_two_plus)) ** 2,
+		np.abs(np.vdot(code_one_minus, code_two_minus)) ** 2
 	)
