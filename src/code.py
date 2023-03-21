@@ -66,15 +66,15 @@ def deserialize_code_family(family_name: str) -> list[Code]:
 		codes.append(Code(family_name, (zero_encoding, one_encoding), is_random))
 	return codes
 
-def get_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dimension: int) -> Code:
-	assert symmetry * (number_of_filled_levels + 2) <= physical_dimension
-	family_name = f"binomial-{symmetry},{number_of_filled_levels},{physical_dimension}"
+def get_binomial_code(symmetry: int, average_photon_number: int, physical_dimension: int) -> Code:
+	assert symmetry * (average_photon_number + 2) <= physical_dimension
+	family_name = f"binomial-{symmetry},{average_photon_number},{physical_dimension}"
 	existing_versions = deserialize_code_family(family_name)
 	if len(existing_versions) > 0:
 		return existing_versions[-1]
 	plus_encoding, minus_encoding = qt.Qobj(), qt.Qobj()
-	for i in range(number_of_filled_levels + 2):
-		i_encoding = np.sqrt(scipy.special.binom(number_of_filled_levels + 1, i)) * qt.basis(physical_dimension, i * symmetry)
+	for i in range(average_photon_number + 2):
+		i_encoding = np.sqrt(scipy.special.binom(average_photon_number + 1, i)) * qt.basis(physical_dimension, i * symmetry)
 		plus_encoding += i_encoding
 		minus_encoding += (-1) ** i * i_encoding
 	plus_encoding = plus_encoding.unit()
@@ -88,13 +88,13 @@ def get_binomial_code(symmetry: int, number_of_filled_levels: int, physical_dime
 	serialize_code(binomial_code)
 	return binomial_code
 
-def make_haar_random_code(symmetry: int, number_of_filled_levels_in_plus_and_minus_states: int, physical_dimension: int) -> Code:
-	assert symmetry * (number_of_filled_levels_in_plus_and_minus_states + 2) <= physical_dimension
-	zero_projector = sum([qt.ket2dm(qt.basis(physical_dimension, i * symmetry * 2)) for i in range(number_of_filled_levels_in_plus_and_minus_states // 2 + 1)])
-	one_projector = sum([qt.ket2dm(qt.basis(physical_dimension, symmetry + i * symmetry * 2)) for i in range(number_of_filled_levels_in_plus_and_minus_states // 2 + 1)])
+def make_haar_random_code(symmetry: int, average_photon_number: int, physical_dimension: int) -> Code:
+	assert symmetry * (average_photon_number + 2) <= physical_dimension
+	zero_projector = sum([qt.ket2dm(qt.basis(physical_dimension, i * symmetry * 2)) for i in range(average_photon_number // 2 + 1)])
+	one_projector = sum([qt.ket2dm(qt.basis(physical_dimension, symmetry + i * symmetry * 2)) for i in range(average_photon_number // 2 + 1)])
 	random_state = qt.rand_ket_haar(physical_dimension)
 	random_code = Code(
-		f"haar-random-{symmetry},{number_of_filled_levels_in_plus_and_minus_states},{physical_dimension}",
+		f"haar-random-{symmetry},{average_photon_number},{physical_dimension}",
 		((zero_projector * random_state).unit(), (one_projector * random_state).unit()),
 		True,
 	)
