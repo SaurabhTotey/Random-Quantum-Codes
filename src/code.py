@@ -88,7 +88,7 @@ def get_binomial_code(symmetry: int, average_photon_number: int, physical_dimens
 	serialize_code(binomial_code)
 	return binomial_code
 
-def get_cat_code(symmetry: int, coherent_state_value: int, squeezing: float, physical_dimension: int) -> Code:
+def get_cat_code(symmetry: int, coherent_state_value: complex, squeezing: float, physical_dimension: int) -> Code:
 	family_name = f"cat-{symmetry},{coherent_state_value},{squeezing},{physical_dimension}"
 	existing_versions = deserialize_code_family(family_name)
 	if len(existing_versions) > 0:

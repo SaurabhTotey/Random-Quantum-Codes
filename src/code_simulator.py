@@ -18,11 +18,10 @@ def make_wigner_plots_for(code: code.Code) -> None:
 	minus_encoding_wigner = qt.wigner(qt.ket2dm(code.minus_encoding), np.linspace(*x_bounds, x_samples), np.linspace(*y_bounds, y_samples))
 
 	all_wigner_values = np.concatenate((zero_encoding_wigner, one_encoding_wigner, plus_encoding_wigner, minus_encoding_wigner))
-	smallest_wigner_value = np.min(all_wigner_values)
-	largest_wigner_value = np.max(all_wigner_values)
+	most_extreme_wigner_value_magnitude = np.max(np.abs(all_wigner_values))
 
 	cmap = plt.get_cmap("RdBu")
-	normalizer = matplotlib.colors.Normalize(smallest_wigner_value, largest_wigner_value)
+	normalizer = matplotlib.colors.Normalize(-most_extreme_wigner_value_magnitude, most_extreme_wigner_value_magnitude)
 
 	fig, axes = plt.subplots(2, 2, constrained_layout=True)
 	axes[0][0].contourf(np.linspace(*x_bounds, x_samples) / np.sqrt(2), np.linspace(*x_bounds, x_samples) / np.sqrt(2), zero_encoding_wigner, 100, cmap=cmap, norm=normalizer)
