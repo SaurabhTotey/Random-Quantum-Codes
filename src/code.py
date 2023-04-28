@@ -88,6 +88,24 @@ def get_binomial_code(symmetry: int, average_photon_number: int, physical_dimens
 	serialize_code(binomial_code)
 	return binomial_code
 
+def get_cat_code(symmetry: int, coherent_state_value: int, squeezing: float, physical_dimension: int) -> Code:
+	family_name = f"cat-{symmetry},{coherent_state_value},{squeezing},{physical_dimension}"
+	existing_versions = deserialize_code_family(family_name)
+	if len(existing_versions) > 0:
+		return existing_versions[-1]
+	zero_encoding, one_encoding = qt.Qobj(), qt.Qobj()
+	for i in range(2 * symmetry):
+		angle = i * np.pi / symmetry
+		displacement_operator = qt.displace(physical_dimension, coherent_state_value * np.exp(1j * angle))
+		squeezing_operator = qt.squeeze(physical_dimension, squeezing * np.exp(2j * (angle - np.pi / 2)))
+		blade = displacement_operator * squeezing_operator * qt.basis(physical_dimension, 0)
+		zero_encoding += blade
+		one_encoding += (-1) ** i * blade
+	cat_code = Code(family_name, (zero_encoding.unit(), one_encoding.unit()), False)
+	assert_code_is_good(cat_code)
+	serialize_code(cat_code)
+	return cat_code
+
 def make_haar_random_code(symmetry: int, average_photon_number: int, physical_dimension: int) -> Code:
 	assert symmetry * (average_photon_number + 2) <= physical_dimension
 	zero_projector = sum([qt.ket2dm(qt.basis(physical_dimension, i * symmetry * 2)) for i in range(average_photon_number // 2 + 1)])
