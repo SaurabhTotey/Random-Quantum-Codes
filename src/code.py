@@ -106,13 +106,13 @@ def get_cat_code(symmetry: int, coherent_state_value: complex, squeezing: float,
 	serialize_code(cat_code)
 	return cat_code
 
-def make_haar_random_code(symmetry: int, average_photon_number: int, physical_dimension: int) -> Code:
+def make_projected_haar_random_code(symmetry: int, average_photon_number: int, physical_dimension: int) -> Code:
 	assert symmetry * (average_photon_number + 2) <= physical_dimension
 	zero_projector = sum([qt.ket2dm(qt.basis(physical_dimension, i * symmetry * 2)) for i in range(average_photon_number // 2 + 1)])
 	one_projector = sum([qt.ket2dm(qt.basis(physical_dimension, symmetry + i * symmetry * 2)) for i in range(average_photon_number // 2 + 1)])
 	random_state = qt.rand_ket_haar(physical_dimension)
 	random_code = Code(
-		f"haar-random-{symmetry},{average_photon_number},{physical_dimension}",
+		f"projected-haar-random-{symmetry},{average_photon_number},{physical_dimension}",
 		((zero_projector * random_state).unit(), (one_projector * random_state).unit()),
 		True,
 	)
@@ -132,14 +132,14 @@ def make_expanded_haar_random_code(symmetry: int, average_photon_number: int, ph
 	assert_code_is_good(random_code)
 	return random_code
 
-def make_split_expanded_haar_random_code(symmetry: int, average_photon_number: int, physical_dimension: int) -> Code:
+def make_two_expanded_haar_random_code(symmetry: int, average_photon_number: int, physical_dimension: int) -> Code:
 	assert symmetry * (average_photon_number + 2) <= physical_dimension
 	zero_state_to_expand = qt.rand_ket_haar(average_photon_number // 2 + 1)
 	one_state_to_expand = qt.rand_ket_haar(average_photon_number // 2 + 1)
 	zero_state = sum([qt.basis(physical_dimension, i * symmetry * 2) * zero_state_to_expand[i][0][0] for i in range(average_photon_number // 2 + 1)])
 	one_state = sum([qt.basis(physical_dimension, symmetry + i * symmetry * 2) * one_state_to_expand[i][0][0] for i in range(average_photon_number // 2 + 1)])
 	random_code = Code(
-		f"split-expanded-haar-random-{symmetry},{average_photon_number},{physical_dimension}",
+		f"two-expanded-haar-random-{symmetry},{average_photon_number},{physical_dimension}",
 		(zero_state, one_state),
 		True,
 	)
