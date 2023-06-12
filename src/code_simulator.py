@@ -43,15 +43,15 @@ def make_wigner_plots_for(code: code.Code) -> None:
 		os.makedirs(f"data/code/{code.family_name}")
 	plt.savefig(f"data/code/{code.family_name}/wigner.png")
 
-def get_fidelity_of_code_under_loss_noise(code: code.Code, loss_noise_amount: float, use_optimal_recovery: bool) -> float:
+def get_fidelity_of_code_under_noise(code: code.Code, noise: noise.Noise, use_optimal_recovery: bool) -> float:
+	assert code.physical_dimension == noise.dimension
 	directory_path = f"data/code/{code.family_name}/"
-	complete_path = f"{directory_path}fidelity-{loss_noise_amount},{use_optimal_recovery}.txt"
+	complete_path = f"{directory_path}fidelity-{noise},{use_optimal_recovery}.txt"
 	if not code.is_random and os.path.exists(complete_path):
 		with open(complete_path) as file:
 			return float(file.read())
-	noise_matrix = noise.get_loss_noise_matrix(code.physical_dimension, loss_noise_amount)
-	recovery_matrix = recovery.get_optimal_recovery_matrix_for_loss_channel(code, loss_noise_amount) if use_optimal_recovery else code.decoder
-	fidelity = qt.average_gate_fidelity(recovery_matrix * noise_matrix * code.encoder)
+	recovery_matrix = recovery.get_optimal_recovery_matrix_for_noise_channel(code, noise) if use_optimal_recovery else code.decoder
+	fidelity = qt.average_gate_fidelity(recovery_matrix * noise.matrix * code.encoder)
 	if not code.is_random:
 		if not os.path.exists(directory_path):
 			os.makedirs(directory_path)
