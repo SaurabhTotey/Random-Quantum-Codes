@@ -3,10 +3,10 @@ import numpy as np
 import qutip as qt
 import matplotlib
 import matplotlib.pyplot as plt
-from typing import Tuple
+from typing import Optional, Tuple
 from . import code, noise, recovery
 
-def make_wigner_plots_for(code: code.Code) -> None:
+def make_wigner_plots_for(code: code.Code, save_path: Optional[str] = "") -> None:
 	x_bounds = (-8, 8)
 	y_bounds = (-8, 8)
 	x_samples = 600
@@ -33,30 +33,64 @@ def make_wigner_plots_for(code: code.Code) -> None:
 	for axis in axes.flat:
 		axis.set_aspect("equal")
 
-	plt.suptitle(f"{code.family_name} Wigner Function Plots")
+	plt.suptitle(f"{code.name} Wigner Function Plots")
 	axes[0][0].set_title("Zero Encoding")
 	axes[0][1].set_title("One Encoding")
 	axes[1][0].set_title("Plus Encoding")
 	axes[1][1].set_title("Minus Encoding")
 
-	if not os.path.exists(f"data/code/{code.family_name}/"):
-		os.makedirs(f"data/code/{code.family_name}")
-	plt.savefig(f"data/code/{code.family_name}/wigner.png")
+	if save_path is None:
+		return
 
-def get_fidelity_of_code_under_noise(code: code.Code, noise: noise.Noise, use_optimal_recovery: bool) -> float:
-	assert code.physical_dimension == noise.dimension
-	directory_path = f"data/code/{code.family_name}/"
-	complete_path = f"{directory_path}fidelity-{noise},{use_optimal_recovery}.txt"
-	if not code.is_random and os.path.exists(complete_path):
+	if save_path == "":
+		if not os.path.exists(f"data/code/{code.name}/"):
+			os.makedirs(f"data/code/{code.name}")
+		plt.savefig(f"data/code/{code.name}/wigner.png")
+	else:
+		plt.savefig(save_path)
+
+def get_known_fidelity_for(code_name: str, is_code_random: bool, noise: noise.Noise, use_optimal_recovery: bool) -> Optional[float]:
+	if is_code_random:
+		complete_path = f"data/code/random/{code_name},{noise},{use_optimal_recovery}/fidelity.txt"
+	else:
+		complete_path = f"data/code/{code_name}/fidelity/{noise},{use_optimal_recovery}.txt"
+
+	if os.path.exists(complete_path):
 		with open(complete_path) as file:
 			return float(file.read())
-	recovery_matrix = recovery.get_optimal_recovery_matrix_for_noise_channel(code, noise) if use_optimal_recovery else code.decoder
-	fidelity = qt.average_gate_fidelity(recovery_matrix * noise.matrix * code.encoder)
-	if not code.is_random:
-		if not os.path.exists(directory_path):
-			os.makedirs(directory_path)
-		with open(complete_path, "w") as file:
-			file.write(f"{fidelity}")
+	else:
+		return None
+
+def get_fidelity_of(ec_code: code.Code, noise: noise.Noise, use_optimal_recovery: bool) -> float:
+	assert ec_code.physical_dimension == noise.dimension
+
+	if not ec_code.is_random:
+		known_fidelity = get_known_fidelity_for(ec_code.name, False, noise, use_optimal_recovery)
+		if known_fidelity is not None:
+			return known_fidelity
+
+	recovery_matrix = recovery.get_optimal_recovery_matrix(ec_code, noise) if use_optimal_recovery else ec_code.decoder
+	fidelity = qt.average_gate_fidelity(recovery_matrix * noise.matrix * ec_code.encoder)
+
+	directory_path = f"data/code/{ec_code.name}/fidelity/"
+	complete_path = f"{directory_path}{noise},{use_optimal_recovery}.txt"
+
+	if ec_code.is_random:
+		best_known_fidelity = get_known_fidelity_for(ec_code.name, True, noise, use_optimal_recovery)
+		if best_known_fidelity is None or fidelity > best_known_fidelity:
+			directory_path = f"data/code/random/{ec_code.name},{noise},{use_optimal_recovery}/"
+			complete_path = f"{directory_path}fidelity.txt"
+			code.serialize_random_code_with_conditions(ec_code, noise, use_optimal_recovery)
+			if use_optimal_recovery:
+				recovery.save_optimal_recovery_matrix_for_random_code(ec_code, noise, recovery_matrix)
+		else:
+			return fidelity
+
+	if not os.path.exists(directory_path):
+		os.makedirs(directory_path)
+	with open(complete_path, "w") as file:
+		file.write(f"{fidelity}")
+
 	return fidelity
 
 def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple[float, float, float, float]:
