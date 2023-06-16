@@ -119,7 +119,6 @@ def get_gkp_code(is_hex_lattice: bool, energy_constraint: float, physical_dimens
 	if existing_code is not None:
 		return existing_code
 	lowering_operator = qt.destroy(physical_dimension)
-	number_operator = qt.num(physical_dimension)
 	x = (lowering_operator.dag() + lowering_operator) / np.sqrt(2)
 	y = 1j * (lowering_operator.dag() - lowering_operator) / np.sqrt(2)
 	x_displacement = 0
