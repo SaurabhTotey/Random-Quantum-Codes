@@ -4,6 +4,7 @@ import qutip as qt
 import matplotlib
 import matplotlib.pyplot as plt
 from typing import Optional, Tuple
+from multiprocess import Lock
 from . import code, noise, recovery
 
 def make_wigner_plots_for(code: code.Code, save_path: Optional[str] = "") -> None:
@@ -61,7 +62,7 @@ def get_known_fidelity_for(code_name: str, is_code_random: bool, noise: noise.No
 	else:
 		return None
 
-def get_fidelity_of(ec_code: code.Code, noise: noise.Noise, use_optimal_recovery: bool) -> float:
+def get_fidelity_of(ec_code: code.Code, noise: noise.Noise, use_optimal_recovery: bool, file_io_mutex: Optional[Lock] = None) -> float:
 	assert ec_code.physical_dimension == noise.dimension
 
 	if not ec_code.is_random:
@@ -75,21 +76,25 @@ def get_fidelity_of(ec_code: code.Code, noise: noise.Noise, use_optimal_recovery
 	directory_path = f"data/code/{ec_code.name}/fidelity/"
 	complete_path = f"{directory_path}{noise},{use_optimal_recovery}.txt"
 
+	if file_io_mutex is not None:
+		file_io_mutex.acquire()
 	if ec_code.is_random:
 		best_known_fidelity = get_known_fidelity_for(ec_code.name, True, noise, use_optimal_recovery)
 		if best_known_fidelity is None or fidelity > best_known_fidelity:
 			directory_path = f"data/code/random/{ec_code.name},{noise},{use_optimal_recovery}/"
 			complete_path = f"{directory_path}fidelity.txt"
 			code.serialize_random_code_with_conditions(ec_code, noise, use_optimal_recovery)
-			if use_optimal_recovery:
-				recovery.save_optimal_recovery_matrix_for_random_code(ec_code, noise, recovery_matrix)
 		else:
+			if file_io_mutex is not None:
+				file_io_mutex.release()
 			return fidelity
 
 	if not os.path.exists(directory_path):
 		os.makedirs(directory_path)
 	with open(complete_path, "w") as file:
 		file.write(f"{fidelity}")
+	if file_io_mutex is not None:
+		file_io_mutex.release()
 
 	return fidelity
 
