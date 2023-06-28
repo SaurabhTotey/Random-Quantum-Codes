@@ -1,6 +1,7 @@
 # created by virtualenv automatically
 bin/
 lib/
+lib64/
 share/
 pyvenv.cfg
 __pycache__/
@@ -8,3 +9,4 @@ data/
 .DS_STORE
 etc/
 .ipynb_checkpoints/
+.python-version
