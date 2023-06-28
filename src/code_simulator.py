@@ -62,10 +62,10 @@ def get_known_fidelity_for(code_name: str, is_code_random: bool, noise: noise.No
 	else:
 		return None
 
-random_code_file_io_mutex = multiprocess.Lock()
-
-def get_fidelity_of(ec_code: code.Code, noise: noise.Noise, use_optimal_recovery: bool) -> float:
+def get_fidelity_of(ec_code: code.Code, noise: noise.Noise, use_optimal_recovery: bool, random_code_file_io_mutex: Optional[multiprocess.Lock] = None) -> float:
 	assert ec_code.physical_dimension == noise.dimension
+	if random_code_file_io_mutex is not None:
+		assert ec_code.is_random
 
 	if not ec_code.is_random:
 		known_fidelity = get_known_fidelity_for(ec_code.name, False, noise, use_optimal_recovery)
@@ -79,21 +79,23 @@ def get_fidelity_of(ec_code: code.Code, noise: noise.Noise, use_optimal_recovery
 	complete_path = f"{directory_path}{noise},{use_optimal_recovery}.txt"
 
 	if ec_code.is_random:
-		random_code_file_io_mutex.acquire()
+		if random_code_file_io_mutex is not None:
+			random_code_file_io_mutex.acquire()
 		best_known_fidelity = get_known_fidelity_for(ec_code.name, True, noise, use_optimal_recovery)
 		if best_known_fidelity is None or fidelity > best_known_fidelity:
 			directory_path = f"data/code/random/{ec_code.name},{noise},{use_optimal_recovery}/"
 			complete_path = f"{directory_path}fidelity.txt"
 			code.serialize_random_code_with_conditions(ec_code, noise, use_optimal_recovery)
 		else:
-			random_code_file_io_mutex.release()
+			if random_code_file_io_mutex is not None:
+				random_code_file_io_mutex.release()
 			return fidelity
 
 	if not os.path.exists(directory_path):
 		os.makedirs(directory_path)
 	with open(complete_path, "w") as file:
 		file.write(f"{fidelity}")
-	if ec_code.is_random:
+	if ec_code.is_random and random_code_file_io_mutex is not None:
 		random_code_file_io_mutex.release()
 
 	return fidelity
