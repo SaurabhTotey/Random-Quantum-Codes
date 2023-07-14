@@ -105,12 +105,10 @@ def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple
 	code_two_zero = code_two.zero_encoding.data.toarray()
 	code_one_one = code_one.one_encoding.data.toarray()
 	code_two_one = code_two.one_encoding.data.toarray()
-	code_one_plus_encoding, code_one_minus_encoding = code.create_plus_and_minus_encodings_from_zero_and_one_encodings(code_one.zero_encoding, code_one.one_encoding)
-	code_two_plus_encoding, code_two_minus_encoding = code.create_plus_and_minus_encodings_from_zero_and_one_encodings(code_two.zero_encoding, code_two.one_encoding)
-	code_one_plus = code_one_plus_encoding.data.toarray()
-	code_one_minus = code_one_minus_encoding.data.toarray()
-	code_two_plus = code_two_plus_encoding.data.toarray()
-	code_two_minus = code_two_minus_encoding.data.toarray()
+	code_one_plus = code_one.plus_encoding.data.toarray()
+	code_one_minus = code_one.minus_encoding.data.toarray()
+	code_two_plus = code_two.plus_encoding.data.toarray()
+	code_two_minus = code_two.minus_encoding.data.toarray()
 
 	if code_one.physical_dimension > code_two.physical_dimension:
 		code_one_zero, code_two_zero = code_two_zero, code_one_zero

@@ -37,7 +37,7 @@ def assert_code_is_good(code: Code) -> None:
 		if not np.allclose(relevant_inner_products, [0, 1, 1]):
 			raise Exception(f"<{name_one}|{name_two}> = {relevant_inner_products[0]} ;\t sqrt(<{name_one}|{name_one}>) = {relevant_inner_products[1]} ;\t sqrt(<{name_two}|{name_two}>) = {relevant_inner_products[2]}")
 	check_encodings(code.zero_encoding, code.one_encoding, "0", "1")
-	check_encodings(*create_plus_and_minus_encodings_from_zero_and_one_encodings(code.zero_encoding, code.one_encoding), "+", "-")
+	check_encodings(code.plus_encoding, code.minus_encoding, "+", "-")
 
 trivial_code = Code("trivial", (qt.basis(2, 0), qt.basis(2, 1)), False)
 
@@ -140,8 +140,8 @@ def get_gkp_code(is_hex_lattice: bool, energy_constraint: float, physical_dimens
 	else:
 		h_gate = energy_constraint * (x ** 2 + y ** 2) - (sx_gate + sx_gate.dag() + sz_gate + sz_gate.dag())
 		clifford_y_gate = qt.hadamard_transform()
-	_, h_eigenvectors = h_gate.eigenstates()
-	_, c_eigenvectors = clifford_y_gate.eigenstates()
+	_, h_eigenvectors = h_gate.eigenstates(eigvals=2)
+	_, c_eigenvectors = clifford_y_gate.eigenstates(eigvals=2)
 	ground_state = h_eigenvectors[0]
 	first_excited_state = -h_eigenvectors[1]
 	u = (c_eigenvectors[1] * qt.basis(2, 0).dag() + c_eigenvectors[0] * qt.basis(2, 1).dag()).full()
