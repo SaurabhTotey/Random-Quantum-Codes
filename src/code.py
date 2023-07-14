@@ -144,6 +144,11 @@ def get_gkp_code(is_hex_lattice: bool, energy_constraint: float, physical_dimens
 	_, c_eigenvectors = clifford_y_gate.eigenstates(eigvals=2)
 	ground_state = h_eigenvectors[0]
 	first_excited_state = -h_eigenvectors[1]
+	ground_wavefunction_data = qt.HarmonicOscillatorWaveFunction(h_eigenvectors[0]).data
+	first_excited_wavefunction_data = qt.HarmonicOscillatorWaveFunction(h_eigenvectors[1]).data
+	if first_excited_wavefunction_data[len(first_excited_wavefunction_data) // 2].real > ground_wavefunction_data[len(ground_wavefunction_data) // 2].real:
+		ground_state = h_eigenvectors[1]
+		first_excited_state = -h_eigenvectors[0]
 	u = (c_eigenvectors[1] * qt.basis(2, 0).dag() + c_eigenvectors[0] * qt.basis(2, 1).dag()).full()
 	zero_encoding = u[0, 0] * ground_state + u[0, 1] * first_excited_state
 	one_encoding = u[1, 0] * ground_state + u[1, 1] * first_excited_state
