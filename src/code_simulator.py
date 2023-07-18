@@ -1,10 +1,12 @@
 import os
 import numpy as np
 import qutip as qt
+import itertools
 import matplotlib
 import matplotlib.pyplot as plt
-from typing import Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 import multiprocess
+import multiprocess.pool
 from . import code, noise, recovery
 
 def make_wigner_plots_for(code: code.Code, save_path: Optional[str] = "") -> None:
@@ -127,3 +129,74 @@ def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple
 		np.abs(np.vdot(code_one_plus, code_two_plus)) ** 2,
 		np.abs(np.vdot(code_one_minus, code_two_minus)) ** 2
 	)
+
+def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]], noise_parameters: List[List[Any]], make_code_from_parameters: Callable[..., code.Code], make_noise_channel_from_parameters: Callable[..., noise.Noise], number_of_trials_per_parameter_set: Optional[int] = None) -> np.ndarray:
+	"""
+	TODO: document this function
+	"""
+
+	all_parameters = noise_parameters + code_parameters
+	code_parameter_index_combinations = list(itertools.product(*[range(len(specific_parameter_values)) for specific_parameter_values in code_parameters]))
+	code_parameter_combinations = list(itertools.product(*code_parameters))
+	all_parameter_index_combinations = list(itertools.product(*[range(len(specific_parameter_values)) for specific_parameter_values in all_parameters]))
+	all_parameter_combinations = list(itertools.product(*all_parameters))
+
+	# Generate all noise channels beforehand so that there is no issue with multiprocessing. This isn't parallelized because it tends to be quick.
+	noise_channels = np.empty(tuple(len(specific_parameter_values) for specific_parameter_values in all_parameters), noise.Noise)
+	for parameter_indices, parameters in zip(all_parameter_index_combinations, all_parameter_combinations):
+		noise_channels[parameter_indices] = make_noise_channel_from_parameters(*parameters)
+
+	fidelities_shape = tuple(len(specific_parameter_values) for specific_parameter_values in all_parameters)
+	if number_of_trials_per_parameter_set is not None:
+		fidelities_shape = (*fidelities_shape, number_of_trials_per_parameter_set)
+	fidelities = np.zeros(fidelities_shape)
+
+	def initialize_pool(lock_instance):
+		global parameter_sweep_lock
+		parameter_sweep_lock = lock_instance
+	with multiprocess.Pool(initializer=initialize_pool, initargs=(multiprocess.Lock(),)) as pool:
+
+		# If codes are only being used once, pre-generate them because we want to ensure there are no multiprocessing issues if they're not random.
+		pregenerated_codes = None
+		if number_of_trials_per_parameter_set is None or number_of_trials_per_parameter_set == 1:
+			pregenerated_codes = np.empty(tuple(len(code_specific_parameter_values) for code_specific_parameter_values in code_parameters), code.Code)
+			code_generation_processes = np.empty(pregenerated_codes.shape, multiprocess.pool.ApplyResult)
+			for parameter_indices, parameters in zip(code_parameter_index_combinations, code_parameter_combinations):
+				code_generation_processes[parameter_indices] = pool.apply_async(make_code_from_parameters, parameters)
+			for parameter_indices in code_parameter_index_combinations:
+				pregenerated_codes[parameter_indices] = code_generation_processes[parameter_indices].get()
+
+		def get_single_fidelity(code_parameters, code_parameter_indices, all_parameter_indices):
+			ec_code = None
+			if pregenerated_codes is None:
+				ec_code = make_code_from_parameters(*code_parameters)
+				assert ec_code.is_random
+			else:
+				ec_code = pregenerated_codes[code_parameter_indices]
+			noise_channel = noise_channels[all_parameter_indices]
+			lock_to_use = parameter_sweep_lock if ec_code.is_random else None
+			return get_fidelity_of(ec_code, noise_channel, True, lock_to_use)
+
+		fidelity_processes = np.empty(fidelities_shape, dtype=multiprocess.pool.AsyncResult)
+		for parameter_indices, parameters in zip(all_parameter_index_combinations, all_parameter_combinations):
+			code_parameters = parameters[len(noise_parameters):]
+			code_parameter_indices = parameter_indices[len(noise_parameters):]
+			if number_of_trials_per_parameter_set is None:
+				fidelity_processes[parameter_indices] = pool.apply_async(get_single_fidelity, (code_parameters, code_parameter_indices, parameter_indices))
+			else:
+				for trial_number in range(number_of_trials_per_parameter_set):
+					fidelity_process_index = (*parameter_indices, trial_number)
+					fidelity_processes[fidelity_process_index] = pool.apply_async(get_single_fidelity, (code_parameters, code_parameter_indices, parameter_indices))
+		pool.close()
+
+		for parameter_indices, parameters in zip(all_parameter_index_combinations, all_parameter_combinations):
+			if number_of_trials_per_parameter_set is None:
+				fidelities[parameter_indices] = fidelity_processes[parameter_indices].get()
+				print(fidelities[parameter_indices])
+			else:
+				for trial_number in range(number_of_trials_per_parameter_set):
+					fidelity_process_index = (*parameter_indices, trial_number)
+					fidelities[fidelity_process_index] = fidelity_processes[fidelity_process_index].get()
+		pool.join()
+
+	return fidelities
