@@ -142,13 +142,23 @@ def get_gkp_code(is_hex_lattice: bool, energy_constraint: float, physical_dimens
 		clifford_y_gate = qt.hadamard_transform()
 	_, h_eigenvectors = h_gate.eigenstates(eigvals=2)
 	_, c_eigenvectors = clifford_y_gate.eigenstates(eigvals=2)
-	ground_state = h_eigenvectors[0]
-	first_excited_state = -h_eigenvectors[1]
-	ground_wavefunction_data = qt.HarmonicOscillatorWaveFunction(h_eigenvectors[0]).data
-	first_excited_wavefunction_data = qt.HarmonicOscillatorWaveFunction(h_eigenvectors[1]).data
-	if first_excited_wavefunction_data[len(first_excited_wavefunction_data) // 2].real > ground_wavefunction_data[len(ground_wavefunction_data) // 2].real:
+	
+	_, xvecs = qt.position(physical_dimension).eigenstates(eigvals=physical_dimension // 2)
+	first_eigenvector_zero_position = (xvecs[-1].dag() * h_eigenvectors[0]).data.toarray()[0][0]
+	second_eigenvector_zero_position = (xvecs[-1].dag() * h_eigenvectors[1]).data.toarray()[0][0]
+	ground_state = None
+	first_excited_state = None
+	if first_eigenvector_zero_position > second_eigenvector_zero_position:
+		ground_state = h_eigenvectors[0]
+		first_excited_state = -h_eigenvectors[1]
+		if second_eigenvector_zero_position < 0:
+			first_excited_state = h_eigenvectors[1]
+	else:
 		ground_state = h_eigenvectors[1]
 		first_excited_state = -h_eigenvectors[0]
+		if first_eigenvector_zero_position < 0:
+			first_excited_state = h_eigenvectors[0]
+
 	u = (c_eigenvectors[1] * qt.basis(2, 0).dag() + c_eigenvectors[0] * qt.basis(2, 1).dag()).full()
 	zero_encoding = u[0, 0] * ground_state + u[0, 1] * first_excited_state
 	one_encoding = u[1, 0] * ground_state + u[1, 1] * first_excited_state
