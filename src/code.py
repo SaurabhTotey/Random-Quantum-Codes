@@ -143,9 +143,9 @@ def get_gkp_code(is_hex_lattice: bool, energy_constraint: float, physical_dimens
 	_, h_eigenvectors = h_gate.eigenstates(eigvals=2)
 	_, c_eigenvectors = clifford_y_gate.eigenstates(eigvals=2)
 	
-	_, xvecs = qt.position(physical_dimension).eigenstates(eigvals=physical_dimension // 2)
-	first_eigenvector_zero_position = (xvecs[-1].dag() * h_eigenvectors[0]).data.toarray()[0][0]
-	second_eigenvector_zero_position = (xvecs[-1].dag() * h_eigenvectors[1]).data.toarray()[0][0]
+	_, position_eigenvectors = qt.position(physical_dimension).eigenstates(eigvals=physical_dimension // 2)
+	first_eigenvector_zero_position = (position_eigenvectors[-1].dag() * h_eigenvectors[0]).data.toarray()[0][0]
+	second_eigenvector_zero_position = (position_eigenvectors[-1].dag() * h_eigenvectors[1]).data.toarray()[0][0]
 	ground_state = None
 	first_excited_state = None
 	if first_eigenvector_zero_position > second_eigenvector_zero_position:
