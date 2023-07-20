@@ -133,6 +133,7 @@ def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple
 def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]], noise_parameters: List[List[Any]], make_code_from_parameters: Callable[..., code.Code], make_noise_channel_from_parameters: Callable[..., noise.Noise], number_of_trials_per_parameter_set: Optional[int] = None) -> np.ndarray:
 	"""
 	TODO: document this function
+	TODO: this function is SLOW; try reworking how things are looped over
 	"""
 
 	all_parameters = noise_parameters + code_parameters
@@ -151,30 +152,20 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 		fidelities_shape = (*fidelities_shape, number_of_trials_per_parameter_set)
 	fidelities = np.zeros(fidelities_shape)
 
-	# If codes are only being used once, pre-generate them because we want to ensure there are no multiprocessing issues if they're not random.
-	pregenerated_codes = None
-	if number_of_trials_per_parameter_set is None or number_of_trials_per_parameter_set == 1:
-		with multiprocess.Pool() as pool:
+	def initialize_pool(lock_instance):
+		global parameter_sweep_lock
+		parameter_sweep_lock = lock_instance
+	with multiprocess.Pool(initializer=initialize_pool, initargs=(multiprocess.Lock(),)) as pool:
+
+		# If codes are only being used once, pre-generate them because we want to ensure there are no multiprocessing issues if they're not random.
+		pregenerated_codes = None
+		if number_of_trials_per_parameter_set is None or number_of_trials_per_parameter_set == 1:
 			pregenerated_codes = np.empty(tuple(len(code_specific_parameter_values) for code_specific_parameter_values in code_parameters), code.Code)
 			code_generation_processes = np.empty(pregenerated_codes.shape, multiprocess.pool.ApplyResult)
 			for parameter_indices, parameters in zip(code_parameter_index_combinations, code_parameter_combinations):
 				code_generation_processes[parameter_indices] = pool.apply_async(make_code_from_parameters, parameters)
-			pool.close()
 			for parameter_indices in code_parameter_index_combinations:
 				pregenerated_codes[parameter_indices] = code_generation_processes[parameter_indices].get()
-			pool.join()
-
-	# TODO: check if making all these variables global is really necessary
-	def initialize_pool(lock_instance, pregenerated_codes_instance, make_code_from_parameters_function, noise_channels_instances):
-		global parameter_sweep_lock
-		global pregenerated_codes
-		global make_code_from_parameters
-		global noise_channels
-		parameter_sweep_lock = lock_instance
-		pregenerated_codes_instance = pregenerated_codes_instance
-		make_code_from_parameters = make_code_from_parameters_function
-		noise_channels = noise_channels_instances
-	with multiprocess.Pool(initializer=initialize_pool, initargs=(multiprocess.Lock(), pregenerated_codes, make_code_from_parameters, noise_channels)) as pool:
 
 		def get_single_fidelity(code_parameters, code_parameter_indices, all_parameter_indices):
 			ec_code = None
@@ -202,7 +193,6 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 		for parameter_indices, parameters in zip(all_parameter_index_combinations, all_parameter_combinations):
 			if number_of_trials_per_parameter_set is None:
 				fidelities[parameter_indices] = fidelity_processes[parameter_indices].get()
-				print(fidelities[parameter_indices])
 			else:
 				for trial_number in range(number_of_trials_per_parameter_set):
 					fidelity_process_index = (*parameter_indices, trial_number)
