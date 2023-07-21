@@ -132,14 +132,37 @@ def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple
 
 def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]], noise_parameters: List[List[Any]], make_code_from_parameters: Callable[..., code.Code], make_noise_channel_from_parameters: Callable[..., noise.Noise], number_of_trials_per_parameter_set: Optional[int] = None) -> np.ndarray:
 	"""
-	TODO: document this function
+	This function sweeps over the given parameters and gets fidelities for the given codes under the given noise
+	channels. The code_parameters argument is a list of lists, where each sub-list is the list of possible values that a
+	specific parameter can take on. For example, if code_parameters = [[0, 1], ["a", "b", "c"]], then the first code
+	parameter can either have values of 0 and 1, and the second can take on the value of "a" or "b" or "c". These
+	parameters are passed into the make_code_from_parameters argument, so make_code_from_parameters will return Codes
+	using parameters (0, "a"), (0, "b"), (0, "c"), (1, "a"), (1, "b"), and (1, "c"). The noise_parameters argument
+	behaves similarly but should contain parameter values for noise channels. However, the
+	make_noise_channel_from_parameters argument doesn't just take in noise parameters. It takes in all the noise
+	parameters and code parameters in that order. This is so that the noise channel can adequately act on the
+	corresponding code and have the right physical dimension and such. The number_of_trials_per_parameter_set specifies
+	how many times to repeat a "trial" with a set of fixed code parameters and noise channel. For each trial, the code
+	is regenerated with make_code_from_parameters and its fidelity is found. This is mainly useful for random codes
+	since make_code_from_parameters can return a new code even when given the same parameters for random codes. It is
+	assumed that non-random codes will always generate the same when given the same parameters, and accordingly, the
+	number_of_trials_per_parameter_set value should be None or 1 for non-random codes. The return value is an array of
+	fidelities. The shape of the returned array is (len(noise_parameters[0]), len(noise_parameters[1]), ...,
+	len(noise_parameters[n]), len(code_parameters[0]), len(code_parameters[1]), ..., len(code_parameters[m])) where n
+	is the number of noise parameters and m is the number of code parameters. If number_of_trials_per_parameter_set is
+	not None, then there is an additional dimension of size number_of_trials_per_parameter_set for the fidelity of each
+	trial. The indices used to access the returned fidelities correspond to the indices of the parameters used in making
+	that fidelity.
+
 	TODO: add progress bar for jupyter notebooks
 	"""
 
 	all_parameters = noise_parameters + code_parameters
 
 	# Generate all noise channels beforehand so that there is no issue with multiprocessing. This isn't parallelized because it tends to be quick.
-	# TODO: add explanation as to why parallelizing this would be difficult
+	# Additionally, parallelization would be difficult because, while we may assume that unique noise parameters lead to unique noise channels,
+	# it isn't necessarily true that that holds when also accounting for code parameters being used to create noise channels. It is possible
+	# that different code parameters could still be used in the creation of the same noise channel.
 	noise_channels = np.empty(tuple(len(specific_parameter_values) for specific_parameter_values in all_parameters), noise.Noise)
 	number_of_indices = np.product(noise_channels.shape)
 	for i in range(number_of_indices):
