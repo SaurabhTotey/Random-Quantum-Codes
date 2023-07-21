@@ -133,19 +133,17 @@ def compute_code_similarities(code_one: code.Code, code_two: code.Code) -> Tuple
 def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]], noise_parameters: List[List[Any]], make_code_from_parameters: Callable[..., code.Code], make_noise_channel_from_parameters: Callable[..., noise.Noise], number_of_trials_per_parameter_set: Optional[int] = None) -> np.ndarray:
 	"""
 	TODO: document this function
-	TODO: this function is SLOW; try reworking how things are looped over
+	TODO: this function is SLOW; I don't know the culprit
 	"""
 
 	all_parameters = noise_parameters + code_parameters
-	code_parameter_index_combinations = list(itertools.product(*[range(len(specific_parameter_values)) for specific_parameter_values in code_parameters]))
-	code_parameter_combinations = list(itertools.product(*code_parameters))
-	all_parameter_index_combinations = list(itertools.product(*[range(len(specific_parameter_values)) for specific_parameter_values in all_parameters]))
-	all_parameter_combinations = list(itertools.product(*all_parameters))
 
 	# Generate all noise channels beforehand so that there is no issue with multiprocessing. This isn't parallelized because it tends to be quick.
 	noise_channels = np.empty(tuple(len(specific_parameter_values) for specific_parameter_values in all_parameters), noise.Noise)
-	for parameter_indices, parameters in zip(all_parameter_index_combinations, all_parameter_combinations):
-		noise_channels[parameter_indices] = make_noise_channel_from_parameters(*parameters)
+	number_of_indices = np.product(noise_channels.shape)
+	for i in range(number_of_indices):
+		parameter_indices = np.unravel_index(i, noise_channels.shape)
+		noise_channels[parameter_indices] = make_noise_channel_from_parameters(*[all_parameters[j][k] for j, k in enumerate(parameter_indices)])
 
 	fidelities_shape = tuple(len(specific_parameter_values) for specific_parameter_values in all_parameters)
 	if number_of_trials_per_parameter_set is not None:
@@ -161,11 +159,14 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 		pregenerated_codes = None
 		if number_of_trials_per_parameter_set is None or number_of_trials_per_parameter_set == 1:
 			pregenerated_codes = np.empty(tuple(len(code_specific_parameter_values) for code_specific_parameter_values in code_parameters), code.Code)
+			number_of_code_parameter_indices = np.product(pregenerated_codes.shape)
 			code_generation_processes = np.empty(pregenerated_codes.shape, multiprocess.pool.ApplyResult)
-			for parameter_indices, parameters in zip(code_parameter_index_combinations, code_parameter_combinations):
-				code_generation_processes[parameter_indices] = pool.apply_async(make_code_from_parameters, parameters)
-			for parameter_indices in code_parameter_index_combinations:
-				pregenerated_codes[parameter_indices] = code_generation_processes[parameter_indices].get()
+			for i in range(number_of_code_parameter_indices):
+				code_parameter_indices = np.unravel_index(i, pregenerated_codes.shape)
+				code_generation_processes[code_parameter_indices] = pool.apply_async(make_code_from_parameters, tuple(code_parameters[j][k] for j, k in enumerate(code_parameter_indices)))
+			for i in range(number_of_code_parameter_indices):
+				code_parameter_indices = np.unravel_index(i, pregenerated_codes.shape)
+				pregenerated_codes[code_parameter_indices] = code_generation_processes[code_parameter_indices].get()
 
 		def get_single_fidelity(code_parameters, code_parameter_indices, all_parameter_indices):
 			ec_code = None
@@ -179,7 +180,9 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 			return get_fidelity_of(ec_code, noise_channel, True, lock_to_use)
 
 		fidelity_processes = np.empty(fidelities_shape, dtype=multiprocess.pool.AsyncResult)
-		for parameter_indices, parameters in zip(all_parameter_index_combinations, all_parameter_combinations):
+		for i in range(number_of_indices):
+			parameter_indices = np.unravel_index(i, noise_channels.shape)
+			parameters = tuple(all_parameters[j][k] for j, k in enumerate(parameter_indices))
 			code_parameters = parameters[len(noise_parameters):]
 			code_parameter_indices = parameter_indices[len(noise_parameters):]
 			if number_of_trials_per_parameter_set is None:
@@ -190,7 +193,8 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 					fidelity_processes[fidelity_process_index] = pool.apply_async(get_single_fidelity, (code_parameters, code_parameter_indices, parameter_indices))
 		pool.close()
 
-		for parameter_indices, parameters in zip(all_parameter_index_combinations, all_parameter_combinations):
+		for i in range(number_of_indices):
+			parameter_indices = np.unravel_index(i, noise_channels.shape)
 			if number_of_trials_per_parameter_set is None:
 				fidelities[parameter_indices] = fidelity_processes[parameter_indices].get()
 			else:
