@@ -158,18 +158,21 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 
 		# If codes are only being used once, pre-generate them because we want to ensure there are no multiprocessing issues if they're not random.
 		# It is assumed that unique code parameters lead a unique code for non-random codes.
-		# TODO: pregenerating all codes always may be a good idea because it could be possible that random code generation is slow.
-		pregenerated_codes = None
-		if number_of_trials_per_parameter_set is None or number_of_trials_per_parameter_set == 1:
-			pregenerated_codes = np.empty(tuple(len(code_specific_parameter_values) for code_specific_parameter_values in code_parameters), code.Code)
-			number_of_code_parameter_indices = np.product(pregenerated_codes.shape)
-			code_generation_processes = np.empty(pregenerated_codes.shape, multiprocess.pool.ApplyResult)
-			for i in range(number_of_code_parameter_indices):
-				code_parameter_indices = np.unravel_index(i, pregenerated_codes.shape)
-				code_generation_processes[code_parameter_indices] = pool.apply_async(make_code_from_parameters, tuple(code_parameters[j][k] for j, k in enumerate(code_parameter_indices)))
-			for i in range(number_of_code_parameter_indices):
-				code_parameter_indices = np.unravel_index(i, pregenerated_codes.shape)
-				pregenerated_codes[code_parameter_indices] = code_generation_processes[code_parameter_indices].get()
+		pregenerated_codes_shape = tuple(len(code_specific_parameter_values) for code_specific_parameter_values in code_parameters)
+		if number_of_trials_per_parameter_set is not None:
+			pregenerated_codes_shape = (*pregenerated_codes_shape, number_of_trials_per_parameter_set)
+		pregenerated_codes = np.empty(pregenerated_codes_shape, code.Code)
+		number_of_code_parameter_indices = np.product(pregenerated_codes_shape)
+		code_generation_processes = np.empty(pregenerated_codes.shape, multiprocess.pool.ApplyResult)
+		for i in range(number_of_code_parameter_indices):
+			code_parameter_indices = np.unravel_index(i, pregenerated_codes_shape)
+			code_parameter_indices_for_construction = code_parameter_indices
+			if number_of_trials_per_parameter_set is not None:
+				code_parameter_indices_for_construction = code_parameter_indices[:-1] # Last index is trial number which isn't needed for code construction.
+			code_generation_processes[code_parameter_indices] = pool.apply_async(make_code_from_parameters, tuple(code_parameters[j][k] for j, k in enumerate(code_parameter_indices_for_construction)))
+		for i in range(number_of_code_parameter_indices):
+			code_parameter_indices = np.unravel_index(i, pregenerated_codes_shape)
+			pregenerated_codes[code_parameter_indices] = code_generation_processes[code_parameter_indices].get()
 
 		def get_single_fidelity(ec_code, noise_channel):
 			lock_to_use = parameter_sweep_lock if ec_code.is_random else None
@@ -178,19 +181,16 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 		fidelity_processes = np.empty(fidelities_shape, dtype=multiprocess.pool.AsyncResult)
 		for i in range(number_of_indices):
 			parameter_indices = np.unravel_index(i, noise_channels.shape)
-			parameters = tuple(all_parameters[j][k] for j, k in enumerate(parameter_indices))
-			ec_code = None
-			if pregenerated_codes is None:
-				ec_code = make_code_from_parameters(*parameters[len(noise_parameters):])
-				assert ec_code.is_random
-			else:
-				ec_code = pregenerated_codes[parameter_indices[len(noise_parameters):]]
 			noise_channel = noise_channels[parameter_indices]
 			if number_of_trials_per_parameter_set is None:
+				ec_code = pregenerated_codes[parameter_indices[len(noise_parameters):]]
 				fidelity_processes[parameter_indices] = pool.apply_async(get_single_fidelity, (ec_code, noise_channel))
 			else:
 				for trial_number in range(number_of_trials_per_parameter_set):
 					fidelity_process_index = (*parameter_indices, trial_number)
+					ec_code = pregenerated_codes[fidelity_process_index[len(noise_parameters):]]
+					if number_of_trials_per_parameter_set > 1:
+						assert ec_code.is_random
 					fidelity_processes[fidelity_process_index] = pool.apply_async(get_single_fidelity, (ec_code, noise_channel))
 		pool.close()
 
