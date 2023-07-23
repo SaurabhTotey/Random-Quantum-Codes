@@ -179,7 +179,7 @@ def run_parameter_sweep_for_optimal_fidelities(code_parameters: List[List[Any]],
 		parameter_sweep_lock = lock_instance
 	with multiprocess.Pool(initializer=initialize_pool, initargs=(multiprocess.Lock(),)) as pool:
 
-		# If codes are only being used once, pre-generate them because we want to ensure there are no multiprocessing issues if they're not random.
+		# Pre-generate codes because we want to ensure there are no multiprocessing issues if they're not random.
 		# It is assumed that unique code parameters lead a unique code for non-random codes.
 		pregenerated_codes_shape = tuple(len(code_specific_parameter_values) for code_specific_parameter_values in code_parameters)
 		if number_of_trials_per_parameter_set is not None:
